@@ -1,14 +1,20 @@
-*.un~
-*.swp
-tags
-target
-project/boot
-.history
-project.vim
-*.old
-.idea
-.project
-.classpath
-.metadata/
-.settings/
+*.pydevproject
+.metadata
+.gradle
 bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.classpath
+.worksheet/
+.loadpath
+target/
+
+# Eclipse Core
+.project
+# sbteclipse plugin
+.target
