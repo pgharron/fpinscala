@@ -13,8 +13,8 @@ object StateCH6 {
                                                   //| 845))
   intDouble(xx)                                   //> res4: ((Int, Double), fpinscala.state.RNG) = ((769497,0.9258419186808169),Si
                                                   //| mple(130300666313612))
-  ints(5)(xx)                                     //> res5: (List[Int], fpinscala.state.RNG) = (List(769497, 1988230381, -12775714
-                                                  //| 85, -1827708387, 962104480),Simple(63052479226681))
+  ints(6)(xx)                                     //> res5: (List[Int], fpinscala.state.RNG) = (List(769497, 1988230381, -12775714
+                                                  //| 85, -1827708387, 962104480, -1559240709),Simple(179288577635664))
   val k = unit(4) { xx }                          //> k  : (Int, fpinscala.state.RNG) = (4,Simple(2))
   nonNegativeEven { xx }                          //> res6: (Int, fpinscala.state.RNG) = (769496,Simple(50429807845))
   randIntDouble { xx }                            //> res7: ((Int, Double), fpinscala.state.RNG) = ((769497,0.9258419186808169),Si

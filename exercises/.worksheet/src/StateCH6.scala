@@ -10,8 +10,7 @@ object StateCH6 {
   double(xx);System.out.println("""res2: (Double, fpinscala.state.RNG) = """ + $show(res$2));$skip(21); val res$3 = 
   doubleUsingMap(xx);System.out.println("""res3: (Double, fpinscala.state.RNG) = """ + $show(res$3));$skip(16); val res$4 = 
   intDouble(xx);System.out.println("""res4: ((Int, Double), fpinscala.state.RNG) = """ + $show(res$4));$skip(14); val res$5 = 
-  ints(5)(xx);System.out.println("""res5: (List[Int], fpinscala.state.RNG) = """ + $show(res$5));$skip(39); 
-             
+  ints(6)(xx);System.out.println("""res5: (List[Int], fpinscala.state.RNG) = """ + $show(res$5));$skip(25); 
   val k = unit(4) { xx };System.out.println("""k  : (Int, fpinscala.state.RNG) = """ + $show(k ));$skip(25); val res$6 = 
   nonNegativeEven { xx };System.out.println("""res6: (Int, fpinscala.state.RNG) = """ + $show(res$6));$skip(23); val res$7 = 
   randIntDouble { xx };System.out.println("""res7: ((Int, Double), fpinscala.state.RNG) = """ + $show(res$7));$skip(51); val res$8 = 
