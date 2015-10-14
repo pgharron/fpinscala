@@ -10,4 +10,5 @@ project.vim
 .project
 .classpath
 .metadata/
+.settings/
 bin/
