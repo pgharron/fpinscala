@@ -15,8 +15,8 @@ object StateCH6 {
                                                   //| mple(130300666313612))
         
         
-  ints(6)(xx)                                     //> res5: (List[Int], fpinscala.state.RNG) = (List(769497, 1988230381, -12775714
-                                                  //| 85, -1827708387, 962104480, -1559240709),Simple(179288577635664))
+  ints(3)(xx)                                     //> res5: (List[Int], fpinscala.state.RNG) = (List(769497, 1988230381, -12775714
+                                                  //| 85),Simple(197748051927719))
   
   val k = unit(4) { xx }                          //> k  : (Int, fpinscala.state.RNG) = (4,Simple(2))
   nonNegativeEven { xx }                          //> res6: (Int, fpinscala.state.RNG) = (769496,Simple(50429807845))

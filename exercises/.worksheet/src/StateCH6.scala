@@ -12,7 +12,7 @@ object StateCH6 {
   intDouble(xx);System.out.println("""res4: ((Int, Double), fpinscala.state.RNG) = """ + $show(res$4));$skip(32); val res$5 = 
         
         
-  ints(6)(xx);System.out.println("""res5: (List[Int], fpinscala.state.RNG) = """ + $show(res$5));$skip(28); 
+  ints(3)(xx);System.out.println("""res5: (List[Int], fpinscala.state.RNG) = """ + $show(res$5));$skip(28); 
   
   val k = unit(4) { xx };System.out.println("""k  : (Int, fpinscala.state.RNG) = """ + $show(k ));$skip(25); val res$6 = 
   nonNegativeEven { xx };System.out.println("""res6: (Int, fpinscala.state.RNG) = """ + $show(res$6));$skip(23); val res$7 = 
