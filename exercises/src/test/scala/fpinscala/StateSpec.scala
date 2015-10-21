@@ -1,10 +1,12 @@
-package state
+package fpinscala
 
 import org.scalatest.FunSpec
 import fpinscala.state.State._
 import fpinscala.state._
+import fpinscala.state.Input
+import fpinscala.state.Machine
 
-class MySpec extends FunSpec {
+class StateSpec extends FunSpec {
 
   case class Result(candiesDispensed: Int, coinsAccepted: Int)
 
