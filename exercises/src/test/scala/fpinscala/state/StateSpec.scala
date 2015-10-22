@@ -1,10 +1,8 @@
-package fpinscala
+package fpinscala.state
 
 import org.scalatest.FunSpec
 import fpinscala.state.State._
 import fpinscala.state._
-import fpinscala.state.Input
-import fpinscala.state.Machine
 
 class StateSpec extends FunSpec {
 
