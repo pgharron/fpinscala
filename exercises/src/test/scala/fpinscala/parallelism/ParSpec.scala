@@ -26,6 +26,14 @@ class ParSpec extends FunSpec {
       Par.fork(a)
     }
 
+    it("sum Ints") {
+      import fpinscala.parallelism.Examples
+      val f: (Int, Int) => Int = {case (a,b) => a + b} 
+      val es: ExecutorService = Executors.newFixedThreadPool(7)
+      val res: Par[Int] = Examples.sum(Vector[Int](1,2,3,4,5,6,7,8))(f)      
+      assert(res(es).get(1, TimeUnit.SECONDS) === 36)
+    }
+    
     it("test a lazyUnit") {
       val a = unit(18)
       val es: ExecutorService = null
