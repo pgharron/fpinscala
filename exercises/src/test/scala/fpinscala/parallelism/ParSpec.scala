@@ -83,10 +83,30 @@ class ParSpec extends FunSpec {
       val parList: List[Int] = List(1, 2, 3, 4, 5, 0, -2, -1, -99)
 
       val parMap = Par.parFilter(parList) {a: Int => true}
-      val es: ExecutorService = Executors.newFixedThreadPool(13)
+      val es: ExecutorService = Executors.newFixedThreadPool(20)
       
       assert(parMap(es).get(1, TimeUnit.SECONDS).size === 9)
     }
+    
+    it("max Ints") {
+      import fpinscala.parallelism.Examples
+      val f: (Int, Int) => Int = {case (a,b) => a max b} 
+      val es: ExecutorService = Executors.newFixedThreadPool(25)
+      val res: Par[Int] = Examples.sum(Vector[Int](1,2,3,4,5,6,7,8,89,99,19992,99,82))(f)      
+      assert(res(es).get(1, TimeUnit.SECONDS) === 19992)
+    }
+    
+     it("max Words") {
+      import fpinscala.parallelism.Examples
+      val f: (Int, Int) => Int = {case (a,b) => a max b} 
+      val es: ExecutorService = Executors.newFixedThreadPool(2)      
+      val paras = List("This is paragraph 1", "And this is paragraph 2, which is slightly longer than the other one",
+          "Paragraph 3 is pretty short really")
+      
+      val res: Par[Int] = Examples.maxWords(paras)     
+      assert(res(es).get(1, TimeUnit.SECONDS) === 23)
+    }
+    
 
   }
 
