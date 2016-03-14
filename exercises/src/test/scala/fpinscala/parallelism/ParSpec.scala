@@ -95,6 +95,9 @@ class ParSpec extends FunSpec {
     }
     
      it("max Words") {
+      import fpinscala.parallelism.Examples
+      val f: (Int, Int) => Int = {case (a,b) => a max b} 
+
       val es: ExecutorService = Executors.newFixedThreadPool(2)      
       val paras = List("This is paragraph 1", "And this is paragraph 2, which is slightly longer than the other one",
           "Paragraph 3 is pretty short really")
@@ -113,7 +116,7 @@ class ParSpec extends FunSpec {
       val result = map3(res, unit(3), unit(4))((a,b,c) => a + b + c)      
       assert(result(es).get(1, TimeUnit.SECONDS) === 30)
     }     
-    
+   
     
     it("7.4.1 mapping") {
       val es: ExecutorService = null

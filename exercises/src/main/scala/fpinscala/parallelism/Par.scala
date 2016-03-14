@@ -216,8 +216,31 @@ object Examples {
     }
   }
 
-  def sum(ints: IndexedSeq[Int])(f: (Int, Int) => Int): Par[Int] = // `IndexedSeq` is a superclass of random-access sequences like `Vector` in the standard library. Unlike lists, these sequences provide an efficient `splitAt` method for dividing them into two parts at a particular index.
-    if (ints.size <= 1)
+ 
+//  def maxWords(pgs: List[String]): Par[Int] = {
+//    
+//    def countWords(text: String):Int = {
+//      val counts = scala.collection.mutable.Map.empty[String, Int].withDefaultValue(0)
+//        for (rawWord <- text.split("[ ,!.]+")) {
+//           val word = rawWord.toLowerCase
+//              counts(word) += 1
+//      }
+//      
+//     counts.values.sum
+//    }
+//        
+//    if (pgs.size <= 1) {     
+//      val p = pgs.headOption
+//      Par.unit(if (p.isDefined) countWords(p.get) else 0)
+//    } else {
+//      val (l, r) = pgs.splitAt(pgs.length / 2) 
+//      Par.map2(Par.fork(maxWords(l)), Par.fork(maxWords(r))) (_ + _)
+//    }      
+//  }
+//  
+//  
+  def sum(ints: IndexedSeq[Int])(f:(Int, Int) => Int): Par[Int] = // `IndexedSeq` is a superclass of random-access sequences like `Vector` in the standard library. Unlike lists, these sequences provide an efficient `splitAt` method for dividing them into two parts at a particular index.
+    if (ints.size <= 1)      
       Par.unit(ints.headOption getOrElse 0) // `headOption` is a method defined on all collections in Scala. We saw this function in chapter 3.
     else {
       val (l, r) = ints.splitAt(ints.length / 2) // Divide the sequence in half using the `splitAt` function.
@@ -225,4 +248,6 @@ object Examples {
       //      (_ + _) // Recursively sum both halves and add the results together.
     }
 
+  
+  
 }
