@@ -43,6 +43,15 @@ object Par {
       Map2Future(af, bf, f)
     }
 
+  def map3[A, B, C, D](a: Par[A], b: Par[B], c: Par[C])(f: (A, B, C) => D): Par[D] =
+    map2(map2(a, b)((a, b) => (c: C) => f(a, b, c)), c)(_(_))
+
+  def map4[A, B, C, D, E](a: Par[A], b: Par[B], c: Par[C], d: Par[D])(f: (A, B, C, D) => E): Par[E] =
+    map2(map3(a, b, c)((a, b, c) => (d: D) => f(a, b, c, d)), d)(_(_))
+
+  def map5[A, B, C, D, E, F](a: Par[A], b: Par[B], c: Par[C], d: Par[D], e: Par[E])(f: (A, B, C, D, E) => F): Par[F] =
+    map2(map4(a, b, c, d)((a, b, c, d) => (e: E) => f(a, b, c, d, e)), e)(_(_))
+
   /*
 Note: this implementation will not prevent repeated evaluation if multiple threads call `get` in parallel. We could prevent this using synchronization, but it isn't needed for our purposes here (also, repeated evaluation of pure values won't affect results).
 */
@@ -58,7 +67,7 @@ Note: this implementation will not prevent repeated evaluation if multiple threa
       compute(TimeUnit.NANOSECONDS.convert(timeout, units))
 
     private def compute(timeoutInNanos: Long): C = cache match {
-      
+
       case Some(c) => c
       case None =>
         val start = System.nanoTime
@@ -73,7 +82,7 @@ Note: this implementation will not prevent repeated evaluation if multiple threa
 
   // Exercise 7.5
   def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = {
-    val fbs: List[Par[B]] = ps.map(asyncF(f)) 
+    val fbs: List[Par[B]] = ps.map(asyncF(f))
     sequence(fbs)
   }
 
@@ -132,6 +141,50 @@ Note: this implementation will not prevent repeated evaluation if multiple threa
       if (run(es)(cond).get) t(es) // Notice we are blocking on the result of `cond`.
       else f(es)
 
+  // Exercise 7.11
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es => {
+      val i = run(es)(n).get // Notice we are blocking on the result of `cond`.            
+      run(es)(choices(i))
+    }
+
+  // Exercise 7.12    
+  def choiceMap[K, V](n: Par[K])(choices: Map[K, Par[V]]): Par[V] =
+    es => {
+      val k = run(es)(n).get // Notice we are blocking on the result of `cond`.            
+      run(es)(choices(k))
+    }
+
+  def choiceViaChoiceN[A](a: Par[Boolean])(ifTrue: Par[A], ifFalse: Par[A]): Par[A] =
+    choiceN(map(a)(b => if (b) 0 else 1))(List(ifTrue, ifFalse))
+
+  def choiceViaChooser[A](a: Par[Boolean])(ifTrue: Par[A], ifFalse: Par[A]): Par[A] =
+    chooser(a)(b => if (b) ifTrue else ifFalse)
+
+  def choiceNViaChooser[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    chooser(n)(i => choices(i))
+
+  // Exercise 7.13
+  def chooser[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] =
+    es => {
+      val a = run(es)(pa).get
+      run(es)(choices(a))
+    }
+
+  // Exercise 7.14
+  def join[A](a: Par[Par[A]]): Par[A] = {
+    es => run(es)((run(es)(a).get()))
+  }
+
+  def flatMap[A, B](p: Par[A])(f: A => Par[B]): Par[B] =
+    join(map(p)(f))
+
+  def joinViaFlatMap[A](a: Par[Par[A]]): Par[A] =
+    flatMap(a)(x => x)
+
+  def flatMapViaJoin[A, B](p: Par[A])(f: A => Par[B]): Par[B] =
+    join(map(p)(f))
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
@@ -141,38 +194,35 @@ Note: this implementation will not prevent repeated evaluation if multiple threa
 
 object Examples {
   import Par._
-  
+
   def maxWords(pgs: List[String]): Par[Int] = {
-    
-    def countWords(text: String):Int = {
+
+    def countWords(text: String): Int = {
       val counts = scala.collection.mutable.Map.empty[String, Int].withDefaultValue(0)
-        for (rawWord <- text.split("[ ,!.]+")) {
-           val word = rawWord.toLowerCase
-              counts(word) += 1
+      for (rawWord <- text.split("[ ,!.]+")) {
+        val word = rawWord.toLowerCase
+        counts(word) += 1
       }
-      
-     counts.values.sum
+
+      counts.values.sum
     }
-        
-    if (pgs.size <= 1) {     
+
+    if (pgs.size <= 1) {
       val p = pgs.headOption
       Par.unit(if (p.isDefined) countWords(p.get) else 0)
     } else {
-      val (l, r) = pgs.splitAt(pgs.length / 2) 
-      Par.map2(Par.fork(maxWords(l)), Par.fork(maxWords(r))) (_ + _)
-    }      
+      val (l, r) = pgs.splitAt(pgs.length / 2)
+      Par.map2(Par.fork(maxWords(l)), Par.fork(maxWords(r)))(_ + _)
+    }
   }
-  
-  
-  def sum(ints: IndexedSeq[Int])(f:(Int, Int) => Int): Par[Int] = // `IndexedSeq` is a superclass of random-access sequences like `Vector` in the standard library. Unlike lists, these sequences provide an efficient `splitAt` method for dividing them into two parts at a particular index.
-    if (ints.size <= 1)      
+
+  def sum(ints: IndexedSeq[Int])(f: (Int, Int) => Int): Par[Int] = // `IndexedSeq` is a superclass of random-access sequences like `Vector` in the standard library. Unlike lists, these sequences provide an efficient `splitAt` method for dividing them into two parts at a particular index.
+    if (ints.size <= 1)
       Par.unit(ints.headOption getOrElse 0) // `headOption` is a method defined on all collections in Scala. We saw this function in chapter 3.
     else {
       val (l, r) = ints.splitAt(ints.length / 2) // Divide the sequence in half using the `splitAt` function.
-      Par.map2(Par.fork(sum(l)(f)), Par.fork(sum(r)(f))) {(a, b) => f(a, b)}
-//      (_ + _) // Recursively sum both halves and add the results together.
+      Par.map2(Par.fork(sum(l)(f)), Par.fork(sum(r)(f))) { (a, b) => f(a, b) }
+      //      (_ + _) // Recursively sum both halves and add the results together.
     }
 
-  
-  
 }

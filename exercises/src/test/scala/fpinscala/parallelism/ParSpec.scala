@@ -11,16 +11,14 @@ class ParSpec extends FunSpec {
 
     it("should create a Future given a timeout") {
 
-      val a = unit(18)
-      val b = unit(6)
+      val a = lazyUnit(18)
+      val b = lazyUnit(6)
 
-      def aPlusb[I](a: Int, b: Int): Int = {
-        a + b
+      val f: Par[Int] = Par.map2[Int, Int, Int](a, b) {
+        case (x, y) => x + y        
       }
 
-      val f: Par[Int] = Par.map2[Int, Int, Int](a, b)(aPlusb(_, _))
-
-      val es: ExecutorService = null
+      val es: ExecutorService = Executors.newFixedThreadPool(3)
       assert(f(es).get == 24, "It should add up")
 
       Par.fork(a)
@@ -35,9 +33,9 @@ class ParSpec extends FunSpec {
     }
     
     it("test a lazyUnit") {
-      val a = unit(18)
-      val es: ExecutorService = null
-      val x = Par.lazyUnit(1)
+      val es: ExecutorService = Executors.newFixedThreadPool(1)
+      val res = Par.lazyUnit(1)
+      assert(res(es).get(1, TimeUnit.SECONDS) === 1)
     }
 
     it("test asyncF") {
@@ -60,12 +58,12 @@ class ParSpec extends FunSpec {
 
     it("test sorted Par List") {
       val l = List(1, 2, 3, 4, 5, 0, -2, -1, -99)
-      val parList: Par[List[Int]] = Par.unit(l)
+      val parList: Par[List[Int]] = Par.lazyUnit(l)
 
       val parListSorted = Par.sortPar(parList)
-      val es: ExecutorService = null
+      val es: ExecutorService = Executors.newFixedThreadPool(1)
 
-      assert(parListSorted(es).get == l.sorted, "It should be sorted in par...")
+      assert(parListSorted(es).get(1, TimeUnit.SECONDS) == l.sorted, "It should be sorted in par...")
     }
 
     it("test ParMap") {
@@ -97,8 +95,6 @@ class ParSpec extends FunSpec {
     }
     
      it("max Words") {
-      import fpinscala.parallelism.Examples
-      val f: (Int, Int) => Int = {case (a,b) => a max b} 
       val es: ExecutorService = Executors.newFixedThreadPool(2)      
       val paras = List("This is paragraph 1", "And this is paragraph 2, which is slightly longer than the other one",
           "Paragraph 3 is pretty short really")
@@ -106,8 +102,38 @@ class ParSpec extends FunSpec {
       val res: Par[Int] = Examples.maxWords(paras)     
       assert(res(es).get(1, TimeUnit.SECONDS) === 23)
     }
+      
+    it("tests map3") {
+      val es: ExecutorService = Executors.newFixedThreadPool(2)      
+      val paras = List("This is paragraph 1", "And this is paragraph 2, which is slightly longer than the other one",
+          "Paragraph 3 is pretty short really")
+      
+      val res: Par[Int] = Examples.maxWords(paras)
+      
+      val result = map3(res, unit(3), unit(4))((a,b,c) => a + b + c)      
+      assert(result(es).get(1, TimeUnit.SECONDS) === 30)
+    }     
     
+    
+    it("7.4.1 mapping") {
+      val es: ExecutorService = null
+      val p1 = map(unit(1))(_ + 1)
+      val p2 = unit(2)
+      assert(equal(es)(p1,  p2))
+    }
+    
+    it("7.4.2 fork law") {
+      val es: ExecutorService = Executors.newFixedThreadPool(1)
+      val p2 = unit(2)
+      assert(equal(es)(fork(p2), p2))
+    }
 
+    it("7.8 fork bug") {
+      val a: Par[Int] = lazyUnit(42 + 1)
+      val S: ExecutorService = Executors.newFixedThreadPool(2)
+      assert(equal(S)(a, fork(a)))
+    }
+        
   }
 
 }

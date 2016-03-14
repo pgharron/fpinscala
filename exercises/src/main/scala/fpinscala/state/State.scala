@@ -36,6 +36,9 @@ object RNG {
     (if (i < 0) -(i + 1) else i, r)
   }
 
+  def boolean(rng: RNG): (Boolean, RNG) =
+    rng.nextInt match { case (i, rng2) => (i % 2 == 0, rng2) }
+
   // Exercise 6.2
   // We generate an integer >= 0 and divide it by one higher than the
   // maximum. This is just one possible solution.
@@ -193,9 +196,9 @@ object VendingMachine {
 
   def update = (i: Input) => (s: Machine) =>
     (i, s) match {
-      case (_, Machine(_, 0, _)) => s
+      case (_, Machine(_, 0, _))        => s
       case (Coin, Machine(false, _, _)) => s
-      case (Turn, Machine(true, _, _)) => s
+      case (Turn, Machine(true, _, _))  => s
       case (Coin, Machine(true, candy, coin)) =>
         Machine(false, candy, coin + 1)
       case (Turn, Machine(false, candy, coin)) =>
@@ -224,9 +227,10 @@ object State {
   // up a list in reverse order, then reverse it at the end.
   // (We could also use a collection.mutable.ListBuffer internally.)
   def sequence[S, A](sas: List[State[S, A]]): State[S, List[A]] = {
+
     def go(s: S, actions: List[State[S, A]], acc: List[A]): (List[A], S) =
       actions match {
-        case Nil => (acc.reverse, s)
+        case Nil    => (acc.reverse, s)
         case h :: t => h.run(s) match { case (a, s2) => go(s2, t, a :: acc) }
       }
     State((s: S) => go(s, sas, List()))
