@@ -18,9 +18,12 @@ object JSON {
 
     def array = surround("[","]")(
       value sep "," map (vs => JArray(vs.toIndexedSeq))) scope "array"
+      
     def obj = surround("{","}")(
       keyval sep "," map (kvs => JObject(kvs.toMap))) scope "object"
+      
     def keyval = escapedQuoted ** (":" *> value)
+    
     def lit = scope("literal") {
       "null".as(JNull) |
       double.map(JNumber(_)) |
@@ -28,6 +31,7 @@ object JSON {
       "true".as(JBool(true)) |
       "false".as(JBool(false))
     }
+    
     def value: Parser[JSON] = lit | obj | array
   
     root(whitespace *> (obj | array))
@@ -41,7 +45,7 @@ object JSONExample extends App {
   val jsonTxt = """
 {
   "Company name" : "Microsoft Corporation",
-  "Ticker"  : "MSFT",
+  "Ticker"  : "true",
   "Active"  : true,
   "Price"   : 30.66,
   "Shares outstanding" : 8.38e9,

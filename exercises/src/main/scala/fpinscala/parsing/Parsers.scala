@@ -1,8 +1,9 @@
 package fpinscala.parsing
 import fpinscala.testing._
 import scala.util.matching.Regex
+import java.util.regex._
 
-trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call methods of trait
+trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trait
 
   def char(c: Char): Parser[Char] =
     string(c.toString).map(_.charAt(0))
@@ -23,6 +24,10 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
 
   implicit def regex(r: Regex): Parser[String]
 
+  def label[A](msg: String)(p: Parser[A]): Parser[A]
+
+  def scope[A](msg: String)(p: Parser[A]): Parser[A]
+
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = // what is in list e.g. List[Parser[Char]]??
     if (n <= 0) succeed(List())
     else map2(p, listOfN(n - 1, p))(_ :: _)
@@ -34,7 +39,8 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
 
   // applies the function f to the result of p, if successful
   def map[A, B](p: Parser[A])(f: A => B): Parser[B] = {
-    flatMap(p)(b => succeed(f(b)))
+//    flatMap(p)(b => succeed(f(b)))
+        flatMap(p)(f andThen succeed)
   }
 
   // Returns the portion of input inspected by p if successful
@@ -48,15 +54,20 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
 
   // Ex. 9.1
   def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] =
-    for { a <- p; b <- p2 } yield f(a,b) // Cool!
+    for { a <- p; b <- p2 } yield f(a, b) // Cool!#################
 
   def many1[A](p: Parser[A]): Parser[List[A]] =
     map2(p, many(p))(_ :: _)
 
   def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B]
 
+  /** Parser which consumes zero or more whitespace characters. */
+  def whitespace: Parser[String] = "\\s*".r
+
+  def attempt[A](p: Parser[A]): Parser[A]
+
   // Ex. 9.6  
-  def dfo()= {
+  def dfo() = {
     for {
       digit <- "[0-9]+".r
       val n = digit.toInt // we really should catch exceptions thrown by toInt and convert to parse failure
@@ -76,12 +87,82 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
+  // My implementation for JSON 
+  /** Wraps `p` in start/stop delimiters. */
+  def surround[A](start: Parser[Any], stop: Parser[Any])(p: => Parser[A]) =
+    start *> p <* stop
+
+  /**
+   * Sequences two parsers, ignoring the result of the first.
+   * We wrap the ignored half in slice, since we don't care about its result.
+   */
+  def skipL[B](p: Parser[Any], p2: => Parser[B]): Parser[B] =
+    map2(slice(p), p2)((_, b) => b)
+
+  /**
+   * Sequences two parsers, ignoring the result of the second.
+   * We wrap the ignored half in slice, since we don't care about its result.
+   */
+  def skipR[A](p: Parser[A], p2: => Parser[Any]): Parser[A] =
+    map2(p, slice(p2))((a, b) => a)
+
+  /** Parser which consumes reluctantly until it encounters the given string. */
+  def thru(s: String): Parser[String] = (".*?" + Pattern.quote(s)).r
+
+  /** Unescaped string literals, like "foo" or "bar". */
+  def quoted: Parser[String] = string("\"") *> thru("\"").map(_.dropRight(1))
+
+  /** Unescaped or escaped string literals, like "An \n important \"Quotation\"" or "bar". */
+  def escapedQuoted: Parser[String] =
+    // rather annoying to write, left as an exercise
+    // we'll just use quoted (unescaped literals) for now
+    token(quoted label "string literal")
+
+  /** Attempts `p` and strips trailing whitespace, usually used for the tokens of a grammar. */
+  def token[A](p: Parser[A]): Parser[A] =
+    attempt(p) <* whitespace
+
+  /** Zero or more repetitions of `p`, separated by `p2`, whose results are ignored. */
+  def sep[A](p: Parser[A], p2: Parser[Any]): Parser[List[A]] = // use `Parser[Any]` since don't care about result type of separator
+    sep1(p, p2) or succeed(List())
+
+  /** One or more repetitions of `p`, separated by `p2`, whose results are ignored. */
+  def sep1[A](p: Parser[A], p2: Parser[Any]): Parser[List[A]] =
+    map2(p, many(p2 *> p))(_ :: _)
+
+  /**
+   * C/Java style floating point literals, e.g .1, -1.0, 1e9, 1E-23, etc.
+   * Result is left as a string to keep full precision
+   */
+  def doubleString: Parser[String] =
+    token("[-+]?([0-9]*\\.)?[0-9]+([eE][-+]?[0-9]+)?".r)
+
+  /** Floating point literals, converted to a `Double`. */
+  def double: Parser[Double] =
+    doubleString map (_.toDouble) label "double literal"
+
+  /** A parser that succeeds when given empty input. */
+  def eof: Parser[String] =
+    regex("\\z".r).label("unexpected trailing characters")    
+    
+  /** The root of the grammar, expects no further input following `p`. */
+  def root[A](p: Parser[A]): Parser[A] =
+    p <* eof
+    
   case class ParserOps[A](p: Parser[A]) {
     def |[B >: A](p2: Parser[B]): Parser[B] = self.or(p, p2)
     def or[B >: A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def **[B >: A](p2: => Parser[B]): Parser[(A, B)] = self.product(p, p2)
     def product[B >: A](p2: => Parser[B]): Parser[(A, B)] = self.product(p, p2)
+    def *>[B](p2: => Parser[B]) = self.skipL(p, p2)
+    def <*(p2: => Parser[Any]) = self.skipR(p, p2)
 
+    def label(msg: String): Parser[A] = self.label(msg)(p)
+
+    def scope(msg: String): Parser[A] = self.scope(msg)(p)
+    def sep(separator: Parser[Any]) = self.sep(p, separator)
+    def sep1(separator: Parser[Any]) = self.sep1(p, separator)
+    def as[B](b: B): Parser[B] = self.map(self.slice(p))(_ => b)
     def map[B](f: A => B): Parser[B] = self.map(p)(f)
     def many = self.many(p)
     def slice = self.slice(p)
@@ -92,18 +173,23 @@ trait Parsers[ParseError, Parser[+_]] { self => // so inner classes may call met
 
 case class Location(input: String, offset: Int = 0) {
 
-  lazy val line = input.slice(0, offset + 1).count(_ == '\n') + 1
-  lazy val col = input.slice(0, offset + 1).reverse.indexOf('\n')
+  lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
+  lazy val col = input.slice(0,offset+1).lastIndexOf('\n') match {
+    case -1 => offset + 1
+    case lineStart => offset - lineStart
+  }
 
   def toError(msg: String): ParseError =
     ParseError(List((this, msg)))
 
-  def advanceBy(n: Int) = copy(offset = offset + n)
+  def advanceBy(n: Int) = copy(offset = offset+n)
 
   /* Returns the line corresponding to this location */
   def currentLine: String =
-    if (input.length > 1) input.lines.drop(line - 1).next
+    if (input.length > 1) input.lines.drop(line-1).next
     else ""
+
+  def columnCaret = (" " * (col-1)) + "^"
 }
 
 case class ParseError(stack: List[(Location, String)] = List(),
